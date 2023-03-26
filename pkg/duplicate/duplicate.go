@@ -37,13 +37,12 @@ func FindDuplicates(dir string) ([]string, error) {
 		// hash the file
 		hasher := sha256.New()
 		if _, err := io.Copy(hasher, file); err != nil {
-			fmt.Printf("skipping %s. failed to hash file. %v\n", err)
+			log.Debugf("skipping %s. failed to hash file. %v\n", err)
 			file.Close()
 			continue
 		}
 		// if the hash is in the map, add the file to the duplicates list
 		hash := fmt.Sprintf("%x", hasher.Sum(nil))
-		log.Infof(hash)
 		if _, ok := fileMap[hash]; ok {
 			duplicates = append(duplicates, path)
 		} else {

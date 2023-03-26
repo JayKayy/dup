@@ -37,6 +37,7 @@ func main() {
 		conf.Directories = append(conf.Directories, path)
 	}
 
+	log.SetLevel(conf.LogLevel)
 	duplicate.SetConfig(&conf)
 
 	for _, dir := range conf.Directories {
@@ -54,13 +55,12 @@ func main() {
 			log.Errorf("%v\n", err)
 		}
 		if len(dupes) == 0 {
-			log.Infof("no duplicate files found in %s\n", dir)
+			log.Debugf("no duplicate files found in %s\n", dir)
 			return
 		}
 
-		fmt.Println("Duplicates found:")
 		for _, dup := range dupes {
-			log.Infof(dup)
+			fmt.Println(dup)
 		}
 	}
 
