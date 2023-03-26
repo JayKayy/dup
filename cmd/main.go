@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	log "github.com/sirupsen/logrus"
+	"path/filepath"
 	"strings"
 )
 
@@ -24,30 +25,28 @@ func main() {
 	}
 
 	if conf.IsTest {
-		conf.LogLevel = log.DebugLevel
-		//	path, _ := filepath.Abs(testDir)
-		//conf.Directories = append(conf.Directories, path)
+		//conf.LogLevel = log.DebugLevel
+		path, _ := filepath.Abs(testDir)
+		conf.Directories = append(conf.Directories, path)
 	}
 	log.SetLevel(conf.LogLevel)
-
+	// TODO setup recursive flag
+	// TODO setup verbose flag
+	// TODO setup help flag
+	// TODO define usage
 	flag.Var(&conf, "d", "a directory to search for duplicate files.")
 	flag.Parse()
 
-	log.Debug(conf.Directories)
 	conf.Clean()
-	log.Debug(conf.Directories)
-
 	duplicate.SetConfig(&conf)
 
 	for _, dir := range conf.Directories {
-
+		// TODO process the directories in parallel
 		err := duplicate.ProcessFiles(dir)
 		if err != nil {
 			log.Errorf("%v\n", err)
 		}
-
 	}
-
 	fmt.Println(ProcessFileMap())
 }
 

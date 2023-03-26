@@ -57,10 +57,12 @@ func ProcessFiles(dir string) error {
 	}
 	return nil
 }
+
 func GetFileMap() map[string][]string {
 	return fileMap
 }
-func GetDuplicates() []string {
+
+func GetAllDuplicates() []string {
 	var result []string
 	for _, v := range fileMap {
 		if len(v) > 1 {
