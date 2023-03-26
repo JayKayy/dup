@@ -3,10 +3,10 @@ package main
 import (
 	"dup/pkg/config"
 	"dup/pkg/duplicate"
+	"flag"
 	"fmt"
 	log "github.com/sirupsen/logrus"
-	"os"
-	"path/filepath"
+	"strings"
 )
 
 const (
@@ -15,13 +15,8 @@ const (
 
 func main() {
 
-	// define a string flag that takes a directory path
-	// and has a default value of the current directory
-	//	flag.StringVar(&directory, "dir", ".", "the directory to search")
-	//	flag.Parse()
-
 	conf := config.Config{
-		Directories: nil,
+		Directories: []string{},
 		Recurse:     false,
 		IsTest:      true,
 		ReadOnyMode: true,
@@ -30,38 +25,43 @@ func main() {
 
 	if conf.IsTest {
 		conf.LogLevel = log.DebugLevel
-		path, err := filepath.Abs(testDir)
-		if err != nil {
-			log.Fatalf("opening test dir %v", err)
-		}
-		conf.Directories = append(conf.Directories, path)
+		//	path, _ := filepath.Abs(testDir)
+		//conf.Directories = append(conf.Directories, path)
 	}
-
 	log.SetLevel(conf.LogLevel)
+
+	flag.Var(&conf, "d", "a directory to search for duplicate files.")
+	flag.Parse()
+
+	log.Debug(conf.Directories)
+	conf.Clean()
+	log.Debug(conf.Directories)
+
 	duplicate.SetConfig(&conf)
 
 	for _, dir := range conf.Directories {
-		metadata, err := os.Stat(dir)
-		if err != nil {
-			log.Warningf("failed stating duplicate, %v\n", err)
-			continue
-		}
-		if !metadata.IsDir() {
-			log.Warningf("skipping %v, not a directory", dir)
-			continue
-		}
-		dupes, err := duplicate.FindDuplicates(dir)
+
+		err := duplicate.ProcessFiles(dir)
 		if err != nil {
 			log.Errorf("%v\n", err)
 		}
-		if len(dupes) == 0 {
-			log.Debugf("no duplicate files found in %s\n", dir)
-			return
-		}
 
-		for _, dup := range dupes {
-			fmt.Println(dup)
-		}
 	}
 
+	fmt.Println(ProcessFileMap())
+}
+
+func ProcessFileMap() string {
+	fileMap := duplicate.GetFileMap()
+	sb := strings.Builder{}
+
+	for _, list := range fileMap {
+		if len(list) > 1 {
+			for _, path := range list {
+				sb.WriteString(path + " ")
+			}
+			sb.WriteString("\n")
+		}
+	}
+	return sb.String()
 }
