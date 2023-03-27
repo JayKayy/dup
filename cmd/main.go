@@ -6,58 +6,79 @@ import (
 	"flag"
 	"fmt"
 	log "github.com/sirupsen/logrus"
-	"path/filepath"
 	"strings"
-)
-
-const (
-	testDir = "./test"
+	"sync"
 )
 
 func main() {
 
-	conf := config.Config{
-		Directories: []string{},
-		Recurse:     false,
-		IsTest:      true,
-		ReadOnyMode: true,
-		LogLevel:    log.InfoLevel,
-	}
+	var recurse, verbose, help bool
+	var level log.Level
+	conf := config.Config{}
 
-	if conf.IsTest {
-		//conf.LogLevel = log.DebugLevel
-		path, _ := filepath.Abs(testDir)
-		conf.Directories = append(conf.Directories, path)
-	}
-	log.SetLevel(conf.LogLevel)
-	// TODO setup recursive flag
-	// TODO setup verbose flag
-	// TODO setup help flag
-	// TODO define usage
+	flag.BoolVar(&recurse, "r", false, "recursively search directories beneath the specified directories.")
+	flag.BoolVar(&verbose, "v", false, "enable verbose logging.")
+	flag.BoolVar(&help, "h", false, "display help message.")
 	flag.Var(&conf, "d", "a directory to search for duplicate files.")
 	flag.Parse()
 
-	conf.Clean()
+	if len(conf.Directories) == 0 || help {
+		flag.PrintDefaults()
+		return
+	}
+
+	if verbose {
+		level = log.DebugLevel
+	} else {
+		level = log.InfoLevel
+	}
+
+	conf.Recurse = recurse
+	conf.LogLevel = level
+
+	//conf.IsTest = false
+	//if conf.IsTest {
+	//	conf.LogLevel = log.DebugLevel
+	//	path, _ := filepath.Abs("./test")
+	//	conf.Directories = append(conf.Directories, path)
+	//}
+
+	log.SetLevel(conf.LogLevel)
+	err := conf.Clean()
+	if err != nil {
+		log.Fatalf("parsing a relative path: %v", err)
+	}
 	duplicate.SetConfig(&conf)
 
+	var wg sync.WaitGroup
+	var mut sync.Mutex
 	for _, dir := range conf.Directories {
-		// TODO process the directories in parallel
-		err := duplicate.ProcessFiles(dir)
-		if err != nil {
-			log.Errorf("%v\n", err)
-		}
+		dir := dir
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			err := duplicate.ProcessFiles(dir, &mut)
+			if err != nil {
+				log.Debugf("processing dir failed %v", err)
+			}
+		}()
 	}
-	fmt.Println(ProcessFileMap())
+	wg.Wait()
+	fmt.Print(ProcessFileMap())
 }
 
 func ProcessFileMap() string {
-	fileMap := duplicate.GetFileMap()
+	fileMap := duplicate.GetHashMap()
 	sb := strings.Builder{}
 
 	for _, list := range fileMap {
 		if len(list) > 1 {
-			for _, path := range list {
-				sb.WriteString(path + " ")
+			for i, path := range list {
+				if i == len(list)-1 {
+					sb.WriteString(path)
+				} else {
+					sb.WriteString(path + " = ")
+				}
 			}
 			sb.WriteString("\n")
 		}

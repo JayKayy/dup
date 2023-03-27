@@ -2,25 +2,26 @@ package duplicate
 
 import (
 	"crypto/sha256"
+	"dup/pkg/config"
 	"fmt"
 	log "github.com/sirupsen/logrus"
 	"io"
 	"os"
-
-	"dup/pkg/config"
+	"sync"
 )
 
 var (
-	fileMap    = map[string][]string{}
-	duplicates []string
-	conf       *config.Config
+	hashMap = map[string][]string{}
+	pathMap = map[string]bool{}
+
+	conf *config.Config
 )
 
 func SetConfig(c *config.Config) {
 	conf = c
 }
 
-func ProcessFiles(dir string) error {
+func ProcessFiles(dir string, mut *sync.Mutex) error {
 
 	// open the directory
 	fileList, err := os.ReadDir(dir)
@@ -37,18 +38,28 @@ func ProcessFiles(dir string) error {
 		}
 		if metadata.IsDir() && !conf.Recurse {
 			// Is a directory and we do not want to recurse
-			log.Debugf("recurse=%t - Dir:%t skipping directory %v", conf.Recurse, metadata.IsDir(), path)
+			log.Debugf("skipping directory %v", path)
 			continue
 		} else if metadata.IsDir() && conf.Recurse {
 			// Is a dir and we do want to recuse
-			err := ProcessFiles(path)
+			err := ProcessFiles(path, mut)
 			if err != nil {
 				log.Debugf("recurse=%t - skipping directory %v", conf.Recurse, path)
 			}
 			continue
 		} else {
 			// Is not a directory but is a file to hash
-			err = hashFiletoMap(path)
+			mut.Lock()
+			_, ok := pathMap[path]
+			mut.Unlock()
+
+			if ok {
+				// file has already been processed before
+				continue
+			} else {
+				pathMap[path] = true
+			}
+			err = hashFiletoMap(path, mut)
 			if err != nil {
 				return err
 			}
@@ -58,13 +69,13 @@ func ProcessFiles(dir string) error {
 	return nil
 }
 
-func GetFileMap() map[string][]string {
-	return fileMap
+func GetHashMap() map[string][]string {
+	return hashMap
 }
 
 func GetAllDuplicates() []string {
 	var result []string
-	for _, v := range fileMap {
+	for _, v := range hashMap {
 		if len(v) > 1 {
 			for _, s := range v {
 				result = append(result, s)
@@ -74,20 +85,29 @@ func GetAllDuplicates() []string {
 	return result
 }
 
-func hashFiletoMap(path string) error {
+func hashFiletoMap(path string, mut *sync.Mutex) error {
+
 	file, err := os.Open(path)
-	defer file.Close()
 	if err != nil {
 		return fmt.Errorf("Reading file contents %v\n", err)
 	}
+	defer file.Close()
+
 	hasher := sha256.New()
-	if _, err := io.Copy(hasher, file); err != nil {
+
+	_, err = io.Copy(hasher, file)
+
+	if err != nil {
 		log.Debugf("skipping %s. failed to hash file. %v\n", file.Name(), err)
 		return err
 	}
+
 	// if the hash is in the map, add the file to the duplicates list
 	hash := fmt.Sprintf("%x", hasher.Sum(nil))
-	fileMap[hash] = append(fileMap[hash], path)
+	mut.Lock()
+	hashMap[hash] = append(hashMap[hash], path)
+	mut.Unlock()
+	log.Debugf("processed %s", path)
 
 	return nil
 }
