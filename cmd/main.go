@@ -5,15 +5,19 @@ import (
 	"dup/pkg/duplicate"
 	"flag"
 	"fmt"
-	log "github.com/sirupsen/logrus"
+	"log/slog"
+	"os"
 	"strings"
 	"sync"
 )
 
 func main() {
-
 	var recurse, verbose, help bool
-	var level log.Level
+	var loglevel slog.LevelVar
+	var logger *slog.Logger
+	logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+		Level: &loglevel,
+	}))
 	conf := config.Config{}
 
 	flag.BoolVar(&recurse, "r", false, "recursively search directories beneath the specified directories.")
@@ -28,13 +32,14 @@ func main() {
 	}
 
 	if verbose {
-		level = log.DebugLevel
-	} else {
-		level = log.InfoLevel
+		loglevel.Set(slog.LevelDebug)
+		logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+			Level: &loglevel,
+		}))
 	}
+	slog.SetDefault(logger)
 
 	conf.Recurse = recurse
-	conf.LogLevel = level
 
 	//conf.IsTest = false
 	//if conf.IsTest {
@@ -43,10 +48,10 @@ func main() {
 	//	conf.Directories = append(conf.Directories, path)
 	//}
 
-	log.SetLevel(conf.LogLevel)
 	err := conf.Clean()
 	if err != nil {
-		log.Fatalf("parsing a relative path: %v", err)
+		slog.Error("parsing a relative path", "err", err)
+		return
 	}
 	duplicate.SetConfig(&conf)
 
@@ -59,7 +64,7 @@ func main() {
 			defer wg.Done()
 			err := duplicate.ProcessFiles(dir, &mut)
 			if err != nil {
-				log.Debugf("processing dir failed %v", err)
+				slog.Debug("processing dir failed", "err", err)
 			}
 		}()
 	}

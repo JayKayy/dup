@@ -1,7 +1,7 @@
 module dup
 
-go 1.20
+go 1.22.0
 
-require github.com/sirupsen/logrus v1.9.0
+toolchain go1.23.2
 
-require golang.org/x/sys v0.0.0-20220715151400-c0bba94af5f8 // indirect
+require golang.org/x/exp v0.0.0-20241108190413-2d47ceb2692f

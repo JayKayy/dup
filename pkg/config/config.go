@@ -2,7 +2,7 @@ package config
 
 import (
 	"fmt"
-	log "github.com/sirupsen/logrus"
+	"log/slog"
 	"os"
 )
 
@@ -11,7 +11,6 @@ type Config struct {
 	Recurse     bool
 	IsTest      bool
 	ReadOnyMode bool
-	LogLevel    log.Level
 }
 
 // Search implements the flag.Value interface
@@ -24,12 +23,13 @@ func (c *Config) Set(val string) error {
 	return nil
 }
 
+// Clean converts the directories to an absolute path.
 func (c *Config) Clean() error {
 	for i, v := range c.Directories {
 		if v == "." {
 			cwd, err := os.Getwd()
 			if err != nil {
-				log.Debugf("getting working directory, %v", err)
+				slog.Error("getting working directory", "err", err)
 				return err
 			}
 			c.Directories[i] = cwd

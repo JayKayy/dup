@@ -4,10 +4,11 @@ import (
 	"crypto/sha256"
 	"dup/pkg/config"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"io"
 	"os"
 	"sync"
+
+	"golang.org/x/exp/slog"
 )
 
 var (
@@ -22,7 +23,6 @@ func SetConfig(c *config.Config) {
 }
 
 func ProcessFiles(dir string, mut *sync.Mutex) error {
-
 	// open the directory
 	fileList, err := os.ReadDir(dir)
 	if err != nil {
@@ -33,18 +33,20 @@ func ProcessFiles(dir string, mut *sync.Mutex) error {
 		path := fmt.Sprintf("%s/%s", dir, dirEntry.Name())
 		metadata, err := os.Stat(path)
 		if err != nil {
-			log.Debugf("failed stating file, %v\n", err)
+			slog.Error("failed stating file", "err", err)
 			continue
 		}
 		if metadata.IsDir() && !conf.Recurse {
-			// Is a directory and we do not want to recurse
-			log.Debugf("skipping directory %v", path)
+			// Is a directory and we do NOT want to recurse
+			slog.Info("skipping directory", "dir", path)
 			continue
 		} else if metadata.IsDir() && conf.Recurse {
-			// Is a dir and we do want to recuse
-			err := ProcessFiles(path, mut)
-			if err != nil {
-				log.Debugf("recurse=%t - skipping directory %v", conf.Recurse, path)
+			// Is a dir and we want to recuse
+			if err := ProcessFiles(path, mut); err != nil {
+				slog.Error("processing files",
+					"recurse", conf.Recurse,
+					"skipping directory", path,
+					"err", err)
 			}
 			continue
 		} else {
@@ -59,8 +61,7 @@ func ProcessFiles(dir string, mut *sync.Mutex) error {
 			} else {
 				pathMap[path] = true
 			}
-			err = hashFiletoMap(path, mut)
-			if err != nil {
+			if err := hashFiletoMap(path, mut); err != nil {
 				return err
 			}
 		}
@@ -86,7 +87,6 @@ func GetAllDuplicates() []string {
 }
 
 func hashFiletoMap(path string, mut *sync.Mutex) error {
-
 	file, err := os.Open(path)
 	if err != nil {
 		return fmt.Errorf("Reading file contents %v\n", err)
@@ -96,9 +96,8 @@ func hashFiletoMap(path string, mut *sync.Mutex) error {
 	hasher := sha256.New()
 
 	_, err = io.Copy(hasher, file)
-
 	if err != nil {
-		log.Debugf("skipping %s. failed to hash file. %v\n", file.Name(), err)
+		slog.Error("skipping... failed to hash file", "file", file.Name(), "err", err)
 		return err
 	}
 
@@ -107,7 +106,7 @@ func hashFiletoMap(path string, mut *sync.Mutex) error {
 	mut.Lock()
 	hashMap[hash] = append(hashMap[hash], path)
 	mut.Unlock()
-	log.Debugf("processed %s", path)
+	slog.Debug("processed file", "file", path)
 
 	return nil
 }
