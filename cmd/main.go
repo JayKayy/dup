@@ -52,7 +52,6 @@ func main() {
 	var wg sync.WaitGroup
 	var mut sync.Mutex
 	for _, dir := range conf.Directories {
-		dir := dir
 		wg.Add(1)
 		go func() {
 			defer wg.Done()

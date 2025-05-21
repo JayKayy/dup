@@ -7,9 +7,37 @@ tasks:
       - go build -o bin/dup cmd/main.go
 
   test:
+    vars:
+      tmpdir:
+        sh: mktemp -d
     cmds:
-      - go build -o bin/dup cmd/main.go
-      - ./bin/dup -v -r -d ./test
-      - ./bin/dup -v -d ./test
+      - |
+        contentA=$(head -c 1M /dev/urandom | base64)
+        contentB=$(head -c 1M /dev/urandom | base64)
+        contentC=$(head -c 1M /dev/urandom | base64)
+        go build -o bin/dup cmd/main.go
+        echo "testing dir {{.tmpdir}}"
+        mkdir -p {{.tmpdir}}/1/2/3/4
+        echo "$contentA" > {{.tmpdir}}/one.txt
+        echo "$contentA" > {{.tmpdir}}/one2.txt
+        echo "$contentA" > {{.tmpdir}}/1/one3.txt
+        echo "$contentA" > {{.tmpdir}}/1/2/3/4/one4.txt
+        echo "$contentB" > {{.tmpdir}}/1/2/two.txt
+        echo "$contentB" > {{.tmpdir}}/two2.txt
+        echo "$contentB" > {{.tmpdir}}/1/2/3/two3.txt
+        echo "$contentB" > {{.tmpdir}}/two4.txt
+        echo "$contentB" > {{.tmpdir}}/1/2/3/4/two5.txt
+        echo "$contentC" > {{.tmpdir}}/1/2/3/4/three.txt
+        echo "$contentC" > {{.tmpdir}}/1/2/3/three2.txt
+        echo "$contentC" > {{.tmpdir}}/1/2/three3.txt
+        echo "$contentC" > {{.tmpdir}}/1/2/three4.txt
+        echo "$contentC" > {{.tmpdir}}/1/three5.txt
+        echo "" > {{.tmpdir}}/1/2/blank.txt
+        echo "" > {{.tmpdir}}/blank2.txt
+        echo "unique" > {{.tmpdir}}/unique.txt
+        ./bin/dup -v -r -d {{.tmpdir}}
+    
+
+
 
 
