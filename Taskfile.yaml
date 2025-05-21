@@ -1,0 +1,15 @@
+version: 3
+
+tasks:
+
+  build:
+    cmds:
+      - go build -o bin/dup cmd/main.go
+
+  test:
+    cmds:
+      - go build -o bin/dup cmd/main.go
+      - ./bin/dup -v -r -d ./test
+      - ./bin/dup -v -d ./test
+
+

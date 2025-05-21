@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -13,18 +14,24 @@ type Config struct {
 	ReadOnyMode bool
 }
 
-// Search implements the flag.Value interface
+// Implements the flag.Value interface
 func (c *Config) String() string {
 	return fmt.Sprintf("%v", c.Directories)
 }
 
 func (c *Config) Set(val string) error {
+	if c.Directories == nil {
+		c.Directories = []string{}
+	}
 	c.Directories = append(c.Directories, val)
 	return nil
 }
 
-// Clean converts the directories to an absolute path.
-func (c *Config) Clean() error {
+// ResolvePaths converts the directories to an absolute path.
+func (c *Config) ResolvePaths() error {
+	if c.Directories == nil {
+		return errors.New("directories is not instantiated")
+	}
 	for i, v := range c.Directories {
 		if v == "." {
 			cwd, err := os.Getwd()

@@ -23,10 +23,11 @@ func main() {
 	flag.BoolVar(&recurse, "r", false, "recursively search directories beneath the specified directories.")
 	flag.BoolVar(&verbose, "v", false, "enable verbose logging.")
 	flag.BoolVar(&help, "h", false, "display help message.")
-	flag.Var(&conf, "d", "a directory to search for duplicate files.")
+	flag.Var(&conf, "d", "directories to search for duplicate files.")
 	flag.Parse()
 
 	if len(conf.Directories) == 0 || help {
+		slog.Error("no directories specified")
 		flag.PrintDefaults()
 		return
 	}
@@ -41,16 +42,9 @@ func main() {
 
 	conf.Recurse = recurse
 
-	//conf.IsTest = false
-	//if conf.IsTest {
-	//	conf.LogLevel = log.DebugLevel
-	//	path, _ := filepath.Abs("./test")
-	//	conf.Directories = append(conf.Directories, path)
-	//}
-
-	err := conf.Clean()
+	err := conf.ResolvePaths()
 	if err != nil {
-		slog.Error("parsing a relative path", "err", err)
+		slog.Error("resolving relative paths", "err", err)
 		return
 	}
 	duplicate.SetConfig(&conf)
