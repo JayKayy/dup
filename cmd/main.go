@@ -13,18 +13,25 @@ import (
 
 func main() {
 	var recurse, verbose, help bool
+	var dirs string
 	var loglevel slog.LevelVar
 	var logger *slog.Logger
 	logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
 		Level: &loglevel,
 	}))
+
 	conf := config.Config{}
 
 	flag.BoolVar(&recurse, "r", false, "recursively search directories beneath the specified directories.")
 	flag.BoolVar(&verbose, "v", false, "enable verbose logging.")
 	flag.BoolVar(&help, "h", false, "display help message.")
-	flag.Var(&conf, "d", "directories to search for duplicate files.")
+	flag.StringVar(&dirs, "d", ".", "directories to search for duplicate files.")
 	flag.Parse()
+
+	err := conf.SetDirectories(dirs)
+	if err != nil {
+		slog.Error("setting directories", "err", err)
+	}
 
 	if len(conf.Directories) == 0 || help {
 		slog.Error("no directories specified")
@@ -42,7 +49,7 @@ func main() {
 
 	conf.Recurse = recurse
 
-	err := conf.ResolvePaths()
+	err = conf.ResolvePaths()
 	if err != nil {
 		slog.Error("resolving relative paths", "err", err)
 		return
@@ -69,7 +76,7 @@ func ProcessFileMap() string {
 	fileMap := duplicate.GetHashMap()
 	sb := strings.Builder{}
 
-	for _, list := range fileMap {
+	for _, list := range fileMap.Map {
 		if len(list) > 1 {
 			for i, path := range list {
 				if i == len(list)-1 {

@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strings"
 )
 
 type Config struct {
 	Directories []string
 	Recurse     bool
-	IsTest      bool
 	ReadOnyMode bool
 }
 
@@ -19,11 +19,14 @@ func (c *Config) String() string {
 	return fmt.Sprintf("%v", c.Directories)
 }
 
-func (c *Config) Set(val string) error {
+// SetDirectories takes a comma delimeted string of directories
+// to be registered in the config.
+func (c *Config) SetDirectories(val string) error {
 	if c.Directories == nil {
 		c.Directories = []string{}
 	}
-	c.Directories = append(c.Directories, val)
+	dirs := strings.Split(val, ",")
+	c.Directories = append(c.Directories, dirs...)
 	return nil
 }
 
