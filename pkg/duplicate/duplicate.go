@@ -72,10 +72,7 @@ func ProcessFiles(dir string, mut *sync.Mutex) error {
 			}
 		} else {
 			// Is not a directory but is a file to hash
-			pathMap.Mut.Lock()
 			_, ok := pathMap.Map[path]
-			pathMap.Mut.Unlock()
-
 			if ok {
 				// file has already been processed before
 				continue
@@ -112,7 +109,12 @@ func hashFiletoMap(path string) error {
 	if err != nil {
 		return fmt.Errorf("reading file contents %v", err)
 	}
-	defer file.Close() //nolint: errcheck
+	defer func() {
+		err := file.Close()
+		if err != nil {
+			slog.Error("closing file", "file", file)
+		}
+	}()
 
 	hasher := sha256.New()
 
