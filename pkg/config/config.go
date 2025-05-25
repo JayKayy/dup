@@ -11,7 +11,6 @@ import (
 type Config struct {
 	Directories []string
 	Recurse     bool
-	ReadOnyMode bool
 }
 
 // Implements the flag.Value interface
