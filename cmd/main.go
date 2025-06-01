@@ -1,7 +1,6 @@
 package main
 
 import (
-	"dup/pkg/config"
 	"dup/pkg/duplicate"
 	"encoding/json"
 	"flag"
@@ -12,6 +11,8 @@ import (
 	"sync"
 )
 
+var dups *duplicate.DupeSearch
+
 func main() {
 	var recurse, verbose, hashes, help bool
 	var dirs, output string
@@ -21,7 +22,7 @@ func main() {
 		Level: &loglevel,
 	}))
 
-	conf := config.Config{}
+	conf := duplicate.Config{}
 
 	flag.BoolVar(&recurse, "r", false, "recursively search directories beneath the specified directories.")
 	flag.BoolVar(&verbose, "v", false, "enable verbose logging.")
@@ -29,13 +30,13 @@ func main() {
 	flag.StringVar(&dirs, "d", ".", "directories to search for duplicate files.")
 	flag.StringVar(&output, "o", "text", "display mode for results. options: \"text\", \"json\"")
 	flag.BoolVar(&hashes, "x", false, "whether to change the resulting map's keys to the file hashes. Otherwise the first file processed with that hash is used as the key.")
-
 	flag.Parse()
 
 	if help {
 		flag.PrintDefaults()
 		return
 	}
+
 	err := conf.SetDirectories(dirs)
 	if err != nil {
 		slog.Error("setting directories", "err", err)
@@ -62,15 +63,16 @@ func main() {
 		slog.Error("resolving relative paths", "err", err)
 		return
 	}
-	duplicate.SetConfig(&conf)
+	dups = &duplicate.DupeSearch{}
+
+	dups.Init(&conf)
 
 	var wg sync.WaitGroup
-	var mut sync.Mutex
-	for _, dir := range conf.Directories {
+	for _, dir := range dups.Config.Directories {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			err := duplicate.ProcessFiles(dir, &mut)
+			err := dups.Process(dir)
 			if err != nil {
 				slog.Debug("processing dir failed", "err", err)
 			}
@@ -90,7 +92,7 @@ func main() {
 }
 
 func JSONFileMap(hashes bool) string {
-	fileMap := duplicate.GetHashMap().Map
+	fileMap := dups.HashMap.Map
 	var marshalTarget map[string][]string
 	if hashes {
 		// use hashes as keys and all files as list
@@ -118,10 +120,10 @@ func JSONFileMap(hashes bool) string {
 }
 
 func TextFileMap() string {
-	fileMap := duplicate.GetHashMap()
+	fileMap := dups.GetHashMap()
 	sb := strings.Builder{}
 
-	for _, list := range fileMap.Map {
+	for _, list := range fileMap {
 		if len(list) > 1 {
 			for i, path := range list {
 				if i == len(list)-1 {

@@ -1,0 +1,8 @@
+{
+  duplicates: {
+    "file": [ one, two, three ],
+    "file2": [ one, two, three ],
+    "file3": [ one, two, three ],
+    "file4": [ one, two, three ],
+  }
+}

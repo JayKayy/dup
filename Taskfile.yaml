@@ -35,7 +35,7 @@ tasks:
         echo "" > {{.tmpdir}}/1/2/blank.txt
         echo "" > {{.tmpdir}}/blank2.txt
         echo "unique" > {{.tmpdir}}/unique.txt
-        ./bin/dup -v -r -o json -d {{.tmpdir}}
+        ./bin/dup -v -x -r -o json -d {{.tmpdir}} | jq
     
 
 
