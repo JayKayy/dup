@@ -60,6 +60,7 @@ func (d *DupeSearch) Process(path string) error {
 		if err := d.ProcessFile(file); err != nil {
 			return fmt.Errorf("processing file %s: %w", path, err)
 		}
+
 		if err = file.Close(); err != nil {
 			return fmt.Errorf("closing file %s: %w", path, err)
 		}

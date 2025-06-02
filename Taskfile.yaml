@@ -3,10 +3,18 @@ version: 3
 tasks:
 
   build:
+    run: when_changed
+    sources:
+      - pkg/**/*.go
+      - cmd/*.go
+    generates:
+      - ./bin/dup
     cmds:
       - go build -o bin/dup cmd/main.go
 
   test:
+    deps:
+      - build
     vars:
       tmpdir:
         sh: mktemp -d
@@ -15,7 +23,6 @@ tasks:
         contentA=$(head -c 1M /dev/urandom | base64)
         contentB=$(head -c 1M /dev/urandom | base64)
         contentC=$(head -c 1M /dev/urandom | base64)
-        go build -o bin/dup cmd/main.go
         echo "testing dir {{.tmpdir}}"
         mkdir -p {{.tmpdir}}/1/2/3/4
         echo "$contentA" > {{.tmpdir}}/one.txt
@@ -36,7 +43,12 @@ tasks:
         echo "" > {{.tmpdir}}/blank2.txt
         echo "unique" > {{.tmpdir}}/unique.txt
         ./bin/dup -v -x -r -o json -d {{.tmpdir}} | jq
-    
+
+  clean:
+    dir: .
+    cmds:
+      - rm -f bin/* 
+
 
 
 
